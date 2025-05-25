@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kids Word Learning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .iphone-frame {
+            width: 390px;
+            height: 844px;
+            background: #000;
+            border-radius: 55px;
+            padding: 12px;
+            position: relative;
+            margin: 20px auto;
+        }
+        .iphone-screen {
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            border-radius: 45px;
+            overflow: hidden;
+            position: relative;
+        }
+        .dynamic-island {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 126px;
+            height: 37px;
+            background: #000;
+            border-radius: 20px;
+            z-index: 1000;
+        }
+        iframe {
+            width: 100%;
+            height: calc(100% - 80px);
+            border: none;
+        }
+        .nav-bar {
+            height: 80px;
+            background: #fff;
+            border-top: 1px solid #eee;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #666;
+            text-decoration: none;
+        }
+        .nav-item.active {
+            color: #4F46E5;
+        }
+        .nav-item i {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        .nav-item span {
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="iphone-frame">
+        <div class="dynamic-island"></div>
+        <div class="iphone-screen">
+            <iframe id="contentFrame" src="pages/home.html"></iframe>
+            <div class="nav-bar">
+                <a href="#" class="nav-item active" onclick="changePage('home.html')">
+                    <i class="fas fa-home"></i>
+                    <span>首页</span>
+                </a>
+                <a href="#" class="nav-item" onclick="changePage('learn.html')">
+                    <i class="fas fa-book"></i>
+                    <span>学习</span>
+                </a>
+                <a href="#" class="nav-item" onclick="changePage('games.html')">
+                    <i class="fas fa-gamepad"></i>
+                    <span>游戏</span>
+                </a>
+                <a href="#" class="nav-item" onclick="changePage('me.html')">
+                    <i class="fas fa-user"></i>
+                    <span>我的</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    <script>
+        function changePage(page) {
+            document.getElementById('contentFrame').src = 'pages/' + page;
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+        }
+    </script>
+</body>
+</html> 

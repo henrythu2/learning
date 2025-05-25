@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏 - Kids Word Learning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <!-- 顶部标题 -->
+    <div class="bg-white p-4">
+        <h1 class="text-xl font-bold text-gray-800">趣味游戏</h1>
+        <p class="text-sm text-gray-500 mt-1">通过游戏快乐学习单词</p>
+    </div>
+
+    <!-- 游戏列表 -->
+    <div class="p-4">
+        <!-- 单词配对游戏 -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm mb-4">
+            <div class="flex items-center">
+                <div class="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center mr-4">
+                    <i class="fas fa-puzzle-piece text-2xl text-purple-600"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="font-medium text-gray-800">单词配对</h3>
+                    <p class="text-sm text-gray-500 mt-1">将单词与图片正确配对</p>
+                </div>
+                <button class="bg-purple-600 text-white px-4 py-2 rounded-full text-sm">
+                    开始游戏
+                </button>
+            </div>
+        </div>
+
+        <!-- 单词拼写游戏 -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm mb-4">
+            <div class="flex items-center">
+                <div class="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mr-4">
+                    <i class="fas fa-keyboard text-2xl text-blue-600"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="font-medium text-gray-800">单词拼写</h3>
+                    <p class="text-sm text-gray-500 mt-1">根据图片拼写单词</p>
+                </div>
+                <button class="bg-blue-600 text-white px-4 py-2 rounded-full text-sm">
+                    开始游戏
+                </button>
+            </div>
+        </div>
+
+        <!-- 单词记忆游戏 -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm mb-4">
+            <div class="flex items-center">
+                <div class="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center mr-4">
+                    <i class="fas fa-brain text-2xl text-green-600"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="font-medium text-gray-800">单词记忆</h3>
+                    <p class="text-sm text-gray-500 mt-1">记住并找出相同的单词</p>
+                </div>
+                <button class="bg-green-600 text-white px-4 py-2 rounded-full text-sm">
+                    开始游戏
+                </button>
+            </div>
+        </div>
+
+        <!-- 单词接龙游戏 -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm">
+            <div class="flex items-center">
+                <div class="w-16 h-16 bg-yellow-100 rounded-xl flex items-center justify-center mr-4">
+                    <i class="fas fa-link text-2xl text-yellow-600"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="font-medium text-gray-800">单词接龙</h3>
+                    <p class="text-sm text-gray-500 mt-1">用上一个单词的最后一个字母开始新单词</p>
+                </div>
+                <button class="bg-yellow-600 text-white px-4 py-2 rounded-full text-sm">
+                    开始游戏
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏排行榜 -->
+    <div class="p-4">
+        <h2 class="text-lg font-semibold text-gray-800 mb-3">游戏排行榜</h2>
+        <div class="bg-white rounded-2xl p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
+                        <i class="fas fa-crown text-yellow-500"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-medium text-gray-800">小明</h3>
+                        <p class="text-sm text-gray-500">得分：980</p>
+                    </div>
+                </div>
+                <span class="text-yellow-500 font-medium">#1</span>
+            </div>
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center mr-3">
+                        <i class="fas fa-medal text-gray-500"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-medium text-gray-800">小红</h3>
+                        <p class="text-sm text-gray-500">得分：950</p>
+                    </div>
+                </div>
+                <span class="text-gray-500 font-medium">#2</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mr-3">
+                        <i class="fas fa-award text-orange-500"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-medium text-gray-800">小华</h3>
+                        <p class="text-sm text-gray-500">得分：920</p>
+                    </div>
+                </div>
+                <span class="text-orange-500 font-medium">#3</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 
