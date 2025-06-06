@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单词选择 - Kids Word Learning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .choice-button {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .choice-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        .choice-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .choice-button.correct {
+            background-color: #10b981 !important;
+            color: white !important;
+            animation: correctPulse 0.6s ease;
+        }
+        .choice-button.wrong {
+            background-color: #ef4444 !important;
+            color: white !important;
+            animation: shake 0.5s ease;
+        }
+        @keyframes correctPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        .progress-star {
+            transition: all 0.3s ease;
+        }
+        .progress-star.earned {
+            color: #fbbf24;
+            animation: starPop 0.5s ease;
+        }
+        @keyframes starPop {
+            0% { transform: scale(0) rotate(0); }
+            50% { transform: scale(1.3) rotate(180deg); }
+            100% { transform: scale(1) rotate(360deg); }
+        }
+        .combo-badge {
+            animation: comboBounce 0.5s ease;
+        }
+        @keyframes comboBounce {
+            0% { transform: translateY(-20px) scale(0); }
+            50% { transform: translateY(0) scale(1.1); }
+            100% { transform: translateY(0) scale(1); }
+        }
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.5);
+            transform: scale(0);
+            animation: ripple-effect 0.6s ease-out;
+        }
+        @keyframes ripple-effect {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 顶部导航 -->
+    <div class="bg-white p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+            <button onclick="window.history.back()" class="text-gray-600">
+                <i class="fas fa-arrow-left text-xl"></i>
+            </button>
+            <div class="flex items-center space-x-1">
+                <i class="fas fa-star progress-star text-gray-300 text-2xl" id="star1"></i>
+                <i class="fas fa-star progress-star text-gray-300 text-2xl" id="star2"></i>
+                <i class="fas fa-star progress-star text-gray-300 text-2xl" id="star3"></i>
+            </div>
+            <div class="text-yellow-500">
+                <i class="fas fa-bolt"></i>
+                <span id="xpPoints" class="font-semibold">0</span>
+            </div>
+        </div>
+        <div class="bg-gray-200 rounded-full h-3 relative">
+            <div id="progressBar" class="bg-gradient-to-r from-yellow-400 to-yellow-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <!-- 游戏区域 -->
+    <div class="p-4">
+        <!-- 题目区域 -->
+        <div class="text-center mb-6">
+            <div class="bg-white rounded-3xl p-6 shadow-md inline-block">
+                <div id="questionImage" class="text-8xl mb-4">🍎</div>
+                <div class="flex justify-center space-x-2">
+                    <button onclick="playSound()" class="bg-gray-100 p-2 rounded-full hover:bg-gray-200">
+                        <i class="fas fa-volume-up text-gray-600"></i>
+                    </button>
+                    <button onclick="showHint()" id="hintButton" class="bg-yellow-100 p-2 rounded-full hover:bg-yellow-200">
+                        <i class="fas fa-lightbulb text-yellow-600"></i>
+                    </button>
+                </div>
+            </div>
+            <p class="text-gray-600 mt-4 text-lg">这是什么？</p>
+        </div>
+
+        <!-- 选项按钮 -->
+        <div id="choicesContainer" class="space-y-3 max-w-md mx-auto">
+            <!-- 动态生成选项 -->
+        </div>
+
+        <!-- 连击显示 -->
+        <div id="comboDisplay" class="fixed top-24 right-4 bg-orange-500 text-white px-4 py-2 rounded-full hidden combo-badge">
+            <i class="fas fa-fire mr-2"></i>
+            <span id="comboText">连击 x2</span>
+        </div>
+
+        <!-- 提示显示 -->
+        <div id="hintDisplay" class="mt-4 text-center hidden">
+            <p class="text-gray-600 bg-yellow-50 inline-block px-4 py-2 rounded-full">
+                <i class="fas fa-info-circle text-yellow-600 mr-2"></i>
+                <span id="hintText"></span>
+            </p>
+        </div>
+    </div>
+
+    <!-- 成就解锁弹窗 -->
+    <div id="achievementModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-3xl p-8 text-center max-w-sm mx-4 transform scale-0 transition-transform" id="achievementContent">
+            <div class="text-6xl mb-4">🏆</div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">成就解锁！</h3>
+            <p id="achievementText" class="text-gray-600 mb-4"></p>
+            <button onclick="closeAchievement()" class="bg-yellow-500 text-white px-8 py-3 rounded-full font-semibold">
+                太棒了！
+            </button>
+        </div>
+    </div>
+
+    <script src="wordData.js"></script>
+    <script>
+        let currentWord = null;
+        let choices = [];
+        let totalXP = 0;
+        let combo = 0;
+        let questionsAnswered = 0;
+        let correctAnswers = 0;
+        let totalQuestions = 12;
+        let hintUsed = false;
+        let timeBonus = 0;
+        let questionStartTime = 0;
+        
+        // 初始化游戏
+        function initGame() {
+            loadNewQuestion();
+        }
+        
+        // 加载新题目
+        function loadNewQuestion() {
+            // 记录开始时间（用于时间奖励）
+            questionStartTime = Date.now();
+            hintUsed = false;
+            document.getElementById('hintDisplay').classList.add('hidden');
+            document.getElementById('hintButton').disabled = false;
+            
+            // 随机选择类别和单词
+            const categories = Object.keys(wordData);
+            const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+            const words = wordData[randomCategory].words;
+            
+            // 选择题目
+            currentWord = words[Math.floor(Math.random() * words.length)];
+            
+            // 生成选项
+            choices = [currentWord];
+            const otherWords = words.filter(w => w.id !== currentWord.id);
+            
+            // 根据进度增加难度（更多选项）
+            const numChoices = Math.min(4 + Math.floor(questionsAnswered / 4), 6);
+            
+            while (choices.length < numChoices && otherWords.length > 0) {
+                const randomIndex = Math.floor(Math.random() * otherWords.length);
+                choices.push(otherWords[randomIndex]);
+                otherWords.splice(randomIndex, 1);
+            }
+            
+            // 打乱选项
+            choices.sort(() => 0.5 - Math.random());
+            
+            // 更新UI
+            updateQuestion();
+            generateChoices();
+            updateProgress();
+        }
+        
+        // 更新题目显示
+        function updateQuestion() {
+            document.getElementById('questionImage').textContent = currentWord.emoji;
+        }
+        
+        // 生成选项按钮
+        function generateChoices() {
+            const container = document.getElementById('choicesContainer');
+            container.innerHTML = '';
+            
+            choices.forEach((word, index) => {
+                const button = document.createElement('button');
+                button.className = 'choice-button w-full bg-white text-gray-800 py-4 px-6 rounded-2xl font-medium text-lg shadow-sm hover:bg-indigo-50 transition-all flex items-center justify-between relative';
+                button.onclick = (e) => selectAnswer(word, button, e);
+                
+                button.innerHTML = `
+                    <span>${word.word}</span>
+                    <span class="text-gray-500 text-sm">${word.chinese}</span>
+                `;
+                
+                container.appendChild(button);
+            });
+        }
+        
+        // 选择答案
+        function selectAnswer(word, button, event) {
+            // 添加点击波纹效果
+            createRipple(event, button);
+            
+            // 禁用所有按钮
+            document.querySelectorAll('.choice-button').forEach(btn => {
+                btn.disabled = true;
+            });
+            
+            const isCorrect = word.id === currentWord.id;
+            
+            if (isCorrect) {
+                // 正确答案
+                button.classList.add('correct');
+                correctAnswers++;
+                combo++;
+                
+                // 计算时间奖励
+                const timeElapsed = (Date.now() - questionStartTime) / 1000;
+                if (timeElapsed < 3) {
+                    timeBonus = 3; // 快速回答奖励
+                } else if (timeElapsed < 5) {
+                    timeBonus = 2;
+                } else {
+                    timeBonus = 1;
+                }
+                
+                // 计算总经验值
+                const baseXP = 5;
+                const comboBonus = Math.min(combo - 1, 5) * 2;
+                const hintPenalty = hintUsed ? -2 : 0;
+                const earnedXP = baseXP + timeBonus + comboBonus + hintPenalty;
+                
+                totalXP += earnedXP;
+                updateUI();
+                
+                // 显示连击
+                if (combo > 1) {
+                    showCombo();
+                }
+                
+                // 播放成功音效
+                playSuccessSound();
+                
+                // 检查成就
+                checkAchievements();
+                
+                setTimeout(nextQuestion, 1500);
+            } else {
+                // 错误答案
+                button.classList.add('wrong');
+                combo = 0;
+                
+                // 显示正确答案
+                const correctButton = Array.from(document.querySelectorAll('.choice-button')).find(
+                    btn => btn.textContent.includes(currentWord.word)
+                );
+                if (correctButton) {
+                    correctButton.classList.add('correct');
+                }
+                
+                setTimeout(nextQuestion, 2000);
+            }
+        }
+        
+        // 创建点击波纹效果
+        function createRipple(event, button) {
+            const ripple = document.createElement('span');
+            ripple.className = 'ripple';
+            
+            const rect = button.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = event.clientX - rect.left - size / 2;
+            const y = event.clientY - rect.top - size / 2;
+            
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+            
+            button.appendChild(ripple);
+            
+            setTimeout(() => ripple.remove(), 600);
+        }
+        
+        // 显示连击
+        function showCombo() {
+            const display = document.getElementById('comboDisplay');
+            const text = document.getElementById('comboText');
+            
+            text.textContent = `连击 x${combo}`;
+            display.classList.remove('hidden');
+            display.classList.add('combo-badge');
+            
+            setTimeout(() => {
+                display.classList.add('hidden');
+                display.classList.remove('combo-badge');
+            }, 2000);
+        }
+        
+        // 播放音效
+        function playSound() {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(currentWord.word);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.8;
+                speechSynthesis.speak(utterance);
+            }
+        }
+        
+        // 播放成功音效
+        function playSuccessSound() {
+            // 可以添加实际的音效文件
+            // 这里用一个简单的视觉反馈代替
+            document.body.style.backgroundColor = '#f0fdf4';
+            setTimeout(() => {
+                document.body.style.backgroundColor = '#f9fafb';
+            }, 300);
+        }
+        
+        // 显示提示
+        function showHint() {
+            if (hintUsed) return;
+            
+            hintUsed = true;
+            document.getElementById('hintButton').disabled = true;
+            
+            const hintDisplay = document.getElementById('hintDisplay');
+            const hintText = document.getElementById('hintText');
+            
+            // 显示单词的第一个字母
+            hintText.textContent = `提示：这个单词以 "${currentWord.word[0].toUpperCase()}" 开头`;
+            hintDisplay.classList.remove('hidden');
+        }
+        
+        // 下一题
+        function nextQuestion() {
+            questionsAnswered++;
+            
+            if (questionsAnswered >= totalQuestions) {
+                // 游戏结束
+                endGame();
+            } else {
+                loadNewQuestion();
+            }
+        }
+        
+        // 检查成就
+        function checkAchievements() {
+            // 更新星星进度
+            const stars = Math.floor((correctAnswers / totalQuestions) * 3);
+            for (let i = 1; i <= stars; i++) {
+                const star = document.getElementById(`star${i}`);
+                if (!star.classList.contains('earned')) {
+                    star.classList.add('earned');
+                }
+            }
+            
+            // 检查特殊成就
+            if (combo === 5) {
+                showAchievement('连击大师', '连续答对5题！');
+            } else if (correctAnswers === 10 && questionsAnswered === 10) {
+                showAchievement('完美开局', '前10题全部答对！');
+            }
+        }
+        
+        // 显示成就
+        function showAchievement(title, description) {
+            const modal = document.getElementById('achievementModal');
+            const content = document.getElementById('achievementContent');
+            const text = document.getElementById('achievementText');
+            
+            text.innerHTML = `<strong>${title}</strong><br>${description}`;
+            modal.classList.remove('hidden');
+            
+            setTimeout(() => {
+                content.style.transform = 'scale(1)';
+            }, 100);
+        }
+        
+        // 关闭成就弹窗
+        function closeAchievement() {
+            const modal = document.getElementById('achievementModal');
+            const content = document.getElementById('achievementContent');
+            
+            content.style.transform = 'scale(0)';
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+        
+        // 游戏结束
+        function endGame() {
+            const accuracy = Math.round((correctAnswers / totalQuestions) * 100);
+            const stars = Math.floor((correctAnswers / totalQuestions) * 3);
+            
+            alert(`游戏结束！
+            
+正确率：${accuracy}%
+获得星星：${'⭐'.repeat(stars)}
+总经验值：${totalXP} XP
+最高连击：${combo}
+
+继续加油！`);
+            
+            window.history.back();
+        }
+        
+        // 更新UI
+        function updateUI() {
+            document.getElementById('xpPoints').textContent = totalXP;
+        }
+        
+        // 更新进度条
+        function updateProgress() {
+            const progress = (questionsAnswered / totalQuestions) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+        
+        // 初始化
+        initGame();
+    </script>
+</body>
+</html>

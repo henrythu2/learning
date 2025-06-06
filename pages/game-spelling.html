@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单词拼写 - Kids Word Learning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .letter-slot {
+            min-width: 40px;
+            height: 48px;
+            border-bottom: 3px solid #e5e7eb;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 4px;
+            font-size: 24px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .letter-slot.filled {
+            border-color: #6366f1;
+            color: #4f46e5;
+            animation: fillLetter 0.3s ease;
+        }
+        @keyframes fillLetter {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        .letter-button {
+            transition: all 0.2s ease;
+        }
+        .letter-button:not(:disabled):active {
+            transform: scale(0.95);
+        }
+        .letter-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .correct-animation {
+            animation: correctAnswer 0.6s ease;
+        }
+        @keyframes correctAnswer {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1) rotate(5deg); }
+            100% { transform: scale(1) rotate(0); }
+        }
+        .wrong-animation {
+            animation: wrongAnswer 0.5s ease;
+        }
+        @keyframes wrongAnswer {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-10px); }
+            40% { transform: translateX(10px); }
+            60% { transform: translateX(-10px); }
+            80% { transform: translateX(10px); }
+        }
+        .hint-button {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 顶部导航 -->
+    <div class="bg-white p-4 shadow-sm flex items-center justify-between">
+        <button onclick="window.history.back()" class="text-gray-600">
+            <i class="fas fa-arrow-left text-xl"></i>
+        </button>
+        <div class="flex-1 mx-4">
+            <div class="bg-gray-200 rounded-full h-3 relative">
+                <div id="progressBar" class="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="text-red-500">
+                <i class="fas fa-heart"></i>
+                <span id="lives" class="font-semibold">3</span>
+            </div>
+            <div class="text-yellow-500">
+                <i class="fas fa-bolt"></i>
+                <span id="xpPoints" class="font-semibold">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏区域 -->
+    <div class="p-4">
+        <!-- 图片展示 -->
+        <div class="text-center mb-6">
+            <div class="bg-white rounded-3xl p-8 shadow-md inline-block">
+                <div id="wordImage" class="text-8xl mb-4">🍎</div>
+                <button onclick="playSound()" class="bg-gray-100 p-3 rounded-full hover:bg-gray-200 transition-colors">
+                    <i class="fas fa-volume-up text-gray-600"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 拼写区域 -->
+        <div class="text-center mb-8">
+            <div id="spellingSlots" class="flex justify-center items-center">
+                <!-- 动态生成字母槽 -->
+            </div>
+        </div>
+
+        <!-- 字母键盘 -->
+        <div id="letterKeyboard" class="max-w-md mx-auto">
+            <!-- 动态生成字母按钮 -->
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="flex gap-4 mt-6">
+            <button onclick="clearSpelling()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-2xl font-semibold">
+                <i class="fas fa-undo mr-2"></i>清除
+            </button>
+            <button onclick="getHint()" class="flex-1 bg-yellow-500 text-white py-3 rounded-2xl font-semibold hint-button">
+                <i class="fas fa-lightbulb mr-2"></i>提示
+            </button>
+        </div>
+    </div>
+
+    <!-- 成功反馈弹窗 -->
+    <div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-3xl p-8 text-center max-w-sm mx-4 transform scale-0 transition-transform" id="successContent">
+            <div class="text-6xl mb-4">🌟</div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">拼写正确！</h3>
+            <p class="text-gray-600 mb-2">单词：<span id="correctWord" class="font-bold text-blue-600"></span></p>
+            <p class="text-gray-600 mb-4">你获得了 <span class="text-yellow-500 font-bold">+15 XP</span></p>
+            <button onclick="nextWord()" class="bg-blue-600 text-white px-8 py-3 rounded-full font-semibold">
+                下一个
+            </button>
+        </div>
+    </div>
+
+    <script src="wordData.js"></script>
+    <script>
+        let currentWord = null;
+        let currentSpelling = [];
+        let availableLetters = [];
+        let lives = 3;
+        let totalXP = 0;
+        let wordsCompleted = 0;
+        let totalWords = 8;
+        let hintUsed = false;
+        
+        // 初始化游戏
+        function initGame() {
+            loadNewWord();
+            updateUI();
+        }
+        
+        // 加载新单词
+        function loadNewWord() {
+            // 随机选择一个类别和单词
+            const categories = Object.keys(wordData);
+            const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+            const words = wordData[randomCategory].words;
+            currentWord = words[Math.floor(Math.random() * words.length)];
+            
+            // 重置拼写
+            currentSpelling = [];
+            hintUsed = false;
+            
+            // 更新图片
+            document.getElementById('wordImage').textContent = currentWord.emoji;
+            
+            // 生成字母槽
+            generateSpellingSlots();
+            
+            // 生成字母键盘
+            generateLetterKeyboard();
+            
+            updateProgress();
+        }
+        
+        // 生成拼写槽
+        function generateSpellingSlots() {
+            const container = document.getElementById('spellingSlots');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < currentWord.word.length; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'letter-slot';
+                slot.id = `slot-${i}`;
+                container.appendChild(slot);
+            }
+        }
+        
+        // 生成字母键盘
+        function generateLetterKeyboard() {
+            const container = document.getElementById('letterKeyboard');
+            container.innerHTML = '';
+            
+            // 获取正确的字母
+            const correctLetters = currentWord.word.toUpperCase().split('');
+            
+            // 添加一些干扰字母
+            const allLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+            const extraLetters = [];
+            
+            while (extraLetters.length < 6) {
+                const randomLetter = allLetters[Math.floor(Math.random() * allLetters.length)];
+                if (!correctLetters.includes(randomLetter) && !extraLetters.includes(randomLetter)) {
+                    extraLetters.push(randomLetter);
+                }
+            }
+            
+            // 合并并打乱
+            availableLetters = [...correctLetters, ...extraLetters].sort(() => 0.5 - Math.random());
+            
+            // 创建按钮
+            const grid = document.createElement('div');
+            grid.className = 'grid grid-cols-6 gap-2';
+            
+            availableLetters.forEach((letter, index) => {
+                const button = document.createElement('button');
+                button.className = 'letter-button bg-white text-gray-800 py-3 rounded-xl font-bold text-lg shadow-sm hover:bg-indigo-100 transition-colors';
+                button.textContent = letter;
+                button.id = `letter-${index}`;
+                button.onclick = () => selectLetter(letter, index);
+                grid.appendChild(button);
+            });
+            
+            container.appendChild(grid);
+        }
+        
+        // 选择字母
+        function selectLetter(letter, buttonIndex) {
+            if (currentSpelling.length >= currentWord.word.length) return;
+            
+            currentSpelling.push({ letter, buttonIndex });
+            
+            // 更新显示
+            const slotIndex = currentSpelling.length - 1;
+            const slot = document.getElementById(`slot-${slotIndex}`);
+            slot.textContent = letter;
+            slot.classList.add('filled');
+            
+            // 禁用按钮
+            document.getElementById(`letter-${buttonIndex}`).disabled = true;
+            
+            // 检查是否完成拼写
+            if (currentSpelling.length === currentWord.word.length) {
+                checkSpelling();
+            }
+        }
+        
+        // 检查拼写
+        function checkSpelling() {
+            const spelled = currentSpelling.map(item => item.letter).join('').toLowerCase();
+            const correct = currentWord.word.toLowerCase();
+            
+            if (spelled === correct) {
+                // 正确
+                handleCorrectAnswer();
+            } else {
+                // 错误
+                handleWrongAnswer();
+            }
+        }
+        
+        // 处理正确答案
+        function handleCorrectAnswer() {
+            // 添加正确动画
+            document.getElementById('spellingSlots').classList.add('correct-animation');
+            
+            // 增加经验
+            const xpGained = hintUsed ? 8 : 15;
+            totalXP += xpGained;
+            updateUI();
+            
+            // 显示成功弹窗
+            document.getElementById('correctWord').textContent = currentWord.word;
+            const modal = document.getElementById('successModal');
+            const content = document.getElementById('successContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                content.style.transform = 'scale(1)';
+            }, 100);
+        }
+        
+        // 处理错误答案
+        function handleWrongAnswer() {
+            // 添加错误动画
+            document.getElementById('spellingSlots').classList.add('wrong-animation');
+            
+            // 减少生命
+            lives--;
+            updateUI();
+            
+            if (lives <= 0) {
+                // 游戏结束
+                alert('游戏结束！再接再厉！');
+                window.history.back();
+            } else {
+                // 清除拼写，重试
+                setTimeout(() => {
+                    clearSpelling();
+                    document.getElementById('spellingSlots').classList.remove('wrong-animation');
+                }, 500);
+            }
+        }
+        
+        // 清除拼写
+        function clearSpelling() {
+            currentSpelling.forEach(item => {
+                document.getElementById(`letter-${item.buttonIndex}`).disabled = false;
+            });
+            
+            currentSpelling = [];
+            
+            document.querySelectorAll('.letter-slot').forEach(slot => {
+                slot.textContent = '';
+                slot.classList.remove('filled');
+            });
+        }
+        
+        // 获取提示
+        function getHint() {
+            if (hintUsed || currentSpelling.length === 0) return;
+            
+            hintUsed = true;
+            
+            // 显示第一个字母
+            const firstLetter = currentWord.word[0].toUpperCase();
+            const buttonIndex = availableLetters.indexOf(firstLetter);
+            
+            if (currentSpelling.length === 0) {
+                selectLetter(firstLetter, buttonIndex);
+            }
+        }
+        
+        // 播放发音
+        function playSound() {
+            // 这里可以集成真实的音频播放
+            // 暂时用浏览器的语音合成
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(currentWord.word);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.8;
+                speechSynthesis.speak(utterance);
+            }
+        }
+        
+        // 下一个单词
+        function nextWord() {
+            wordsCompleted++;
+            
+            if (wordsCompleted >= totalWords) {
+                // 完成所有单词
+                alert(`太棒了！你完成了所有单词，获得了 ${totalXP} 经验值！`);
+                window.history.back();
+            } else {
+                // 隐藏弹窗
+                const modal = document.getElementById('successModal');
+                const content = document.getElementById('successContent');
+                content.style.transform = 'scale(0)';
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
+                
+                // 移除动画类
+                document.getElementById('spellingSlots').classList.remove('correct-animation');
+                
+                // 加载新单词
+                loadNewWord();
+            }
+        }
+        
+        // 更新UI
+        function updateUI() {
+            document.getElementById('lives').textContent = lives;
+            document.getElementById('xpPoints').textContent = totalXP;
+        }
+        
+        // 更新进度条
+        function updateProgress() {
+            const progress = ((wordsCompleted + 1) / totalWords) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+        
+        // 初始化
+        initGame();
+    </script>
+</body>
+</html>

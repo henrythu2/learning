@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>听音选词 - Kids Word Learning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .choice-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .choice-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .choice-card.selected {
+            border: 3px solid #6366f1;
+            background-color: #eef2ff;
+        }
+        .choice-card.correct {
+            border: 3px solid #10b981;
+            background-color: #d1fae5;
+            animation: correctChoice 0.6s ease;
+        }
+        .choice-card.wrong {
+            border: 3px solid #ef4444;
+            background-color: #fee2e2;
+            animation: wrongChoice 0.5s ease;
+        }
+        @keyframes correctChoice {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05) rotate(2deg); }
+            100% { transform: scale(1); }
+        }
+        @keyframes wrongChoice {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+        .sound-wave {
+            display: inline-block;
+            width: 4px;
+            height: 20px;
+            background-color: #6366f1;
+            margin: 0 2px;
+            animation: wave 1s ease-in-out infinite;
+        }
+        .sound-wave:nth-child(2) { animation-delay: 0.1s; height: 30px; }
+        .sound-wave:nth-child(3) { animation-delay: 0.2s; height: 25px; }
+        .sound-wave:nth-child(4) { animation-delay: 0.3s; height: 35px; }
+        .sound-wave:nth-child(5) { animation-delay: 0.4s; height: 20px; }
+        
+        @keyframes wave {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(0.5); }
+        }
+        
+        .playing .sound-wave {
+            animation-play-state: running;
+        }
+        .sound-wave {
+            animation-play-state: paused;
+        }
+        
+        .streak-badge {
+            animation: bounceIn 0.5s ease;
+        }
+        @keyframes bounceIn {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 顶部导航 -->
+    <div class="bg-white p-4 shadow-sm flex items-center justify-between">
+        <button onclick="window.history.back()" class="text-gray-600">
+            <i class="fas fa-arrow-left text-xl"></i>
+        </button>
+        <div class="flex-1 mx-4">
+            <div class="bg-gray-200 rounded-full h-3 relative">
+                <div id="progressBar" class="bg-gradient-to-r from-green-500 to-green-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="text-orange-500">
+                <i class="fas fa-fire"></i>
+                <span id="streak" class="font-semibold">0</span>
+            </div>
+            <div class="text-yellow-500">
+                <i class="fas fa-bolt"></i>
+                <span id="xpPoints" class="font-semibold">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏区域 -->
+    <div class="p-4">
+        <!-- 说明文字 -->
+        <div class="text-center mb-6">
+            <h2 class="text-xl font-bold text-gray-800">听音选词</h2>
+            <p class="text-gray-600 mt-1">点击播放按钮，选择你听到的单词</p>
+        </div>
+
+        <!-- 播放按钮区域 -->
+        <div class="text-center mb-8">
+            <button id="playButton" onclick="playCurrentWord()" class="bg-white rounded-full p-8 shadow-lg hover:shadow-xl transition-shadow">
+                <div id="soundIcon" class="text-6xl text-indigo-600 mb-4">
+                    <i class="fas fa-volume-up"></i>
+                </div>
+                <div id="soundWaves" class="hidden">
+                    <span class="sound-wave"></span>
+                    <span class="sound-wave"></span>
+                    <span class="sound-wave"></span>
+                    <span class="sound-wave"></span>
+                    <span class="sound-wave"></span>
+                </div>
+                <p class="text-gray-500 mt-4">点击播放</p>
+            </button>
+        </div>
+
+        <!-- 选项卡片 -->
+        <div id="choicesContainer" class="grid grid-cols-2 gap-4 mb-6">
+            <!-- 动态生成选项 -->
+        </div>
+
+        <!-- 提交按钮 -->
+        <button id="submitButton" onclick="checkAnswer()" class="w-full bg-green-600 text-white py-4 rounded-2xl font-semibold text-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-all" disabled>
+            确认答案
+        </button>
+
+        <!-- 连续答对提示 -->
+        <div id="streakBadge" class="hidden fixed top-20 right-4 bg-orange-500 text-white px-4 py-2 rounded-full streak-badge">
+            <i class="fas fa-fire mr-2"></i>
+            <span id="streakText">连续答对 3 题！</span>
+        </div>
+    </div>
+
+    <!-- 反馈弹窗 -->
+    <div id="feedbackModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-3xl p-8 text-center max-w-sm mx-4 transform scale-0 transition-transform" id="feedbackContent">
+            <div id="feedbackIcon" class="text-6xl mb-4"></div>
+            <h3 id="feedbackTitle" class="text-2xl font-bold text-gray-800 mb-2"></h3>
+            <p id="feedbackMessage" class="text-gray-600 mb-4"></p>
+            <button id="feedbackButton" onclick="nextQuestion()" class="bg-indigo-600 text-white px-8 py-3 rounded-full font-semibold">
+                继续
+            </button>
+        </div>
+    </div>
+
+    <script src="wordData.js"></script>
+    <script>
+        let currentWord = null;
+        let selectedChoice = null;
+        let totalXP = 0;
+        let streak = 0;
+        let questionsCompleted = 0;
+        let totalQuestions = 10;
+        let isPlaying = false;
+        
+        // 初始化游戏
+        function initGame() {
+            loadNewQuestion();
+        }
+        
+        // 加载新题目
+        function loadNewQuestion() {
+            // 随机选择类别和单词
+            const categories = Object.keys(wordData);
+            const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+            const words = wordData[randomCategory].words;
+            
+            // 选择正确答案
+            currentWord = words[Math.floor(Math.random() * words.length)];
+            
+            // 生成选项（包含正确答案和3个干扰项）
+            const choices = [currentWord];
+            const otherWords = words.filter(w => w.id !== currentWord.id);
+            
+            while (choices.length < 4 && otherWords.length > 0) {
+                const randomIndex = Math.floor(Math.random() * otherWords.length);
+                choices.push(otherWords[randomIndex]);
+                otherWords.splice(randomIndex, 1);
+            }
+            
+            // 打乱选项顺序
+            choices.sort(() => 0.5 - Math.random());
+            
+            // 生成选项卡片
+            generateChoices(choices);
+            
+            // 重置状态
+            selectedChoice = null;
+            document.getElementById('submitButton').disabled = true;
+            
+            updateProgress();
+        }
+        
+        // 生成选项卡片
+        function generateChoices(choices) {
+            const container = document.getElementById('choicesContainer');
+            container.innerHTML = '';
+            
+            choices.forEach((word, index) => {
+                const card = document.createElement('div');
+                card.className = 'choice-card bg-white rounded-2xl p-6 shadow-sm text-center';
+                card.dataset.wordId = word.id;
+                card.onclick = () => selectChoice(card, word);
+                
+                card.innerHTML = `
+                    <div class="text-5xl mb-3">${word.emoji}</div>
+                    <div class="font-medium text-gray-800 text-lg">${word.word}</div>
+                    <div class="text-gray-500 text-sm mt-1">${word.chinese}</div>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+        
+        // 选择答案
+        function selectChoice(card, word) {
+            // 移除之前的选择
+            document.querySelectorAll('.choice-card').forEach(c => {
+                c.classList.remove('selected');
+            });
+            
+            // 标记新选择
+            card.classList.add('selected');
+            selectedChoice = word;
+            
+            // 启用提交按钮
+            document.getElementById('submitButton').disabled = false;
+        }
+        
+        // 播放当前单词
+        function playCurrentWord() {
+            if (isPlaying) return;
+            
+            isPlaying = true;
+            const playButton = document.getElementById('playButton');
+            const soundIcon = document.getElementById('soundIcon');
+            const soundWaves = document.getElementById('soundWaves');
+            
+            // 切换到播放动画
+            soundIcon.classList.add('hidden');
+            soundWaves.classList.remove('hidden');
+            playButton.classList.add('playing');
+            
+            // 使用语音合成播放单词
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(currentWord.word);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.8;
+                
+                utterance.onend = () => {
+                    // 恢复按钮状态
+                    setTimeout(() => {
+                        soundIcon.classList.remove('hidden');
+                        soundWaves.classList.add('hidden');
+                        playButton.classList.remove('playing');
+                        isPlaying = false;
+                    }, 500);
+                };
+                
+                speechSynthesis.speak(utterance);
+            } else {
+                // 如果不支持语音合成，模拟播放
+                setTimeout(() => {
+                    soundIcon.classList.remove('hidden');
+                    soundWaves.classList.add('hidden');
+                    playButton.classList.remove('playing');
+                    isPlaying = false;
+                }, 2000);
+            }
+        }
+        
+        // 检查答案
+        function checkAnswer() {
+            if (!selectedChoice) return;
+            
+            const isCorrect = selectedChoice.id === currentWord.id;
+            const selectedCard = document.querySelector(`[data-word-id="${selectedChoice.id}"]`);
+            
+            if (isCorrect) {
+                // 正确答案
+                selectedCard.classList.add('correct');
+                streak++;
+                totalXP += 8;
+                
+                // 显示连续答对提示
+                if (streak >= 3) {
+                    showStreakBadge();
+                }
+                
+                showFeedback(true);
+            } else {
+                // 错误答案
+                selectedCard.classList.add('wrong');
+                
+                // 标记正确答案
+                const correctCard = document.querySelector(`[data-word-id="${currentWord.id}"]`);
+                correctCard.classList.add('correct');
+                
+                streak = 0;
+                showFeedback(false);
+            }
+            
+            // 禁用所有选项
+            document.querySelectorAll('.choice-card').forEach(card => {
+                card.style.pointerEvents = 'none';
+            });
+            
+            document.getElementById('submitButton').disabled = true;
+            updateUI();
+        }
+        
+        // 显示反馈
+        function showFeedback(isCorrect) {
+            const modal = document.getElementById('feedbackModal');
+            const content = document.getElementById('feedbackContent');
+            const icon = document.getElementById('feedbackIcon');
+            const title = document.getElementById('feedbackTitle');
+            const message = document.getElementById('feedbackMessage');
+            
+            if (isCorrect) {
+                icon.innerHTML = '✅';
+                title.textContent = '答对了！';
+                message.innerHTML = `正确答案是 <span class="font-bold text-green-600">${currentWord.word}</span><br>获得 +8 XP`;
+            } else {
+                icon.innerHTML = '❌';
+                title.textContent = '再试试！';
+                message.innerHTML = `正确答案是 <span class="font-bold text-red-600">${currentWord.word}</span>`;
+            }
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                content.style.transform = 'scale(1)';
+            }, 100);
+        }
+        
+        // 显示连续答对标记
+        function showStreakBadge() {
+            const badge = document.getElementById('streakBadge');
+            const text = document.getElementById('streakText');
+            
+            text.textContent = `连续答对 ${streak} 题！`;
+            badge.classList.remove('hidden');
+            
+            setTimeout(() => {
+                badge.classList.add('hidden');
+            }, 2000);
+        }
+        
+        // 下一题
+        function nextQuestion() {
+            questionsCompleted++;
+            
+            if (questionsCompleted >= totalQuestions) {
+                // 完成所有题目
+                alert(`游戏结束！\n总共获得 ${totalXP} 经验值\n最高连续答对 ${streak} 题`);
+                window.history.back();
+            } else {
+                // 隐藏反馈弹窗
+                const modal = document.getElementById('feedbackModal');
+                const content = document.getElementById('feedbackContent');
+                content.style.transform = 'scale(0)';
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
+                
+                // 加载下一题
+                loadNewQuestion();
+            }
+        }
+        
+        // 更新UI
+        function updateUI() {
+            document.getElementById('streak').textContent = streak;
+            document.getElementById('xpPoints').textContent = totalXP;
+        }
+        
+        // 更新进度条
+        function updateProgress() {
+            const progress = ((questionsCompleted + 1) / totalQuestions) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+        
+        // 初始化
+        initGame();
+    </script>
+</body>
+</html>

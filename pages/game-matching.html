@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单词配对 - Kids Word Learning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .draggable {
+            cursor: move;
+            transition: all 0.3s ease;
+        }
+        .draggable.dragging {
+            opacity: 0.5;
+            transform: scale(1.1);
+        }
+        .drop-zone {
+            min-height: 60px;
+            border: 2px dashed #cbd5e1;
+            transition: all 0.3s ease;
+        }
+        .drop-zone.drag-over {
+            border-color: #6366f1;
+            background-color: #e0e7ff;
+        }
+        .matched {
+            background-color: #10b981;
+            color: white;
+            animation: matchSuccess 0.5s ease;
+        }
+        @keyframes matchSuccess {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .wrong {
+            background-color: #ef4444;
+            animation: shake 0.5s ease;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        .celebration {
+            animation: celebrate 1s ease;
+        }
+        @keyframes celebrate {
+            0% { transform: scale(0) rotate(0); }
+            50% { transform: scale(1.2) rotate(180deg); }
+            100% { transform: scale(1) rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 顶部导航 -->
+    <div class="bg-white p-4 shadow-sm flex items-center justify-between">
+        <button onclick="window.history.back()" class="text-gray-600">
+            <i class="fas fa-arrow-left text-xl"></i>
+        </button>
+        <div class="flex-1 mx-4">
+            <div class="bg-gray-200 rounded-full h-3 relative">
+                <div id="progressBar" class="bg-gradient-to-r from-green-500 to-green-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+        </div>
+        <div class="flex items-center space-x-2">
+            <div class="text-yellow-500">
+                <i class="fas fa-bolt"></i>
+                <span id="xpPoints" class="font-semibold">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏区域 -->
+    <div class="p-4">
+        <!-- 关卡信息 -->
+        <div class="text-center mb-6">
+            <h2 class="text-xl font-bold text-gray-800">单词配对</h2>
+            <p class="text-gray-600 mt-1">将单词拖到对应的图片上</p>
+        </div>
+
+        <!-- 图片区域 -->
+        <div id="imagesContainer" class="grid grid-cols-2 gap-4 mb-6">
+            <!-- 动态生成图片卡片 -->
+        </div>
+
+        <!-- 单词区域 -->
+        <div id="wordsContainer" class="flex flex-wrap gap-3 justify-center mb-6">
+            <!-- 动态生成单词卡片 -->
+        </div>
+
+        <!-- 检查按钮 -->
+        <button id="checkButton" onclick="checkAnswers()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-semibold text-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-all" disabled>
+            检查答案
+        </button>
+    </div>
+
+    <!-- 成功反馈弹窗 -->
+    <div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-3xl p-8 text-center max-w-sm mx-4 transform scale-0 transition-transform" id="successContent">
+            <div class="text-6xl mb-4 celebration">🎉</div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">太棒了！</h3>
+            <p class="text-gray-600 mb-4">你获得了 <span class="text-yellow-500 font-bold">+10 XP</span></p>
+            <button onclick="nextLevel()" class="bg-green-600 text-white px-8 py-3 rounded-full font-semibold">
+                继续
+            </button>
+        </div>
+    </div>
+
+    <script src="wordData.js"></script>
+    <script>
+        let currentLevel = 0;
+        let totalXP = 0;
+        let selectedWords = [];
+        let draggedElement = null;
+        let totalLevels = 5;
+        
+        // 初始化游戏
+        function initGame() {
+            loadLevel();
+        }
+        
+        // 加载关卡
+        function loadLevel() {
+            const categories = Object.keys(wordData);
+            const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+            const words = wordData[randomCategory].words;
+            
+            // 随机选择4个单词
+            const shuffled = [...words].sort(() => 0.5 - Math.random());
+            selectedWords = shuffled.slice(0, 4);
+            
+            // 生成图片卡片
+            const imagesContainer = document.getElementById('imagesContainer');
+            imagesContainer.innerHTML = '';
+            
+            selectedWords.forEach((word, index) => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-2xl p-4 shadow-sm drop-zone';
+                card.dataset.wordId = word.id;
+                card.innerHTML = `
+                    <div class="text-center">
+                        <div class="text-6xl mb-2">${word.emoji}</div>
+                        <div class="text-gray-400 text-sm">拖拽单词到这里</div>
+                    </div>
+                `;
+                
+                // 添加拖放事件
+                card.addEventListener('dragover', handleDragOver);
+                card.addEventListener('drop', handleDrop);
+                card.addEventListener('dragleave', handleDragLeave);
+                
+                imagesContainer.appendChild(card);
+            });
+            
+            // 生成单词卡片（打乱顺序）
+            const wordsContainer = document.getElementById('wordsContainer');
+            wordsContainer.innerHTML = '';
+            
+            const shuffledWords = [...selectedWords].sort(() => 0.5 - Math.random());
+            shuffledWords.forEach(word => {
+                const wordCard = document.createElement('div');
+                wordCard.className = 'bg-indigo-100 px-4 py-2 rounded-full text-indigo-800 font-medium draggable';
+                wordCard.draggable = true;
+                wordCard.dataset.wordId = word.id;
+                wordCard.textContent = word.word;
+                
+                // 添加拖动事件
+                wordCard.addEventListener('dragstart', handleDragStart);
+                wordCard.addEventListener('dragend', handleDragEnd);
+                
+                wordsContainer.appendChild(wordCard);
+            });
+            
+            updateProgress();
+        }
+        
+        // 拖动开始
+        function handleDragStart(e) {
+            draggedElement = e.target;
+            e.target.classList.add('dragging');
+        }
+        
+        // 拖动结束
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+        }
+        
+        // 拖动经过
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+        
+        // 拖动离开
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+        
+        // 放置
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            
+            if (draggedElement && !e.currentTarget.querySelector('.draggable')) {
+                e.currentTarget.appendChild(draggedElement);
+                draggedElement = null;
+                
+                // 检查是否所有单词都已放置
+                const remainingWords = document.querySelectorAll('#wordsContainer .draggable');
+                if (remainingWords.length === 0) {
+                    document.getElementById('checkButton').disabled = false;
+                }
+            }
+        }
+        
+        // 检查答案
+        function checkAnswers() {
+            const dropZones = document.querySelectorAll('.drop-zone');
+            let correctCount = 0;
+            
+            dropZones.forEach(zone => {
+                const zoneWordId = zone.dataset.wordId;
+                const droppedWord = zone.querySelector('.draggable');
+                
+                if (droppedWord && droppedWord.dataset.wordId === zoneWordId) {
+                    zone.classList.add('matched');
+                    droppedWord.classList.add('matched');
+                    correctCount++;
+                } else if (droppedWord) {
+                    zone.classList.add('wrong');
+                    setTimeout(() => {
+                        zone.classList.remove('wrong');
+                    }, 500);
+                }
+            });
+            
+            if (correctCount === selectedWords.length) {
+                // 全部正确
+                totalXP += 10;
+                document.getElementById('xpPoints').textContent = totalXP;
+                showSuccessModal();
+            } else {
+                // 有错误，允许重试
+                setTimeout(() => {
+                    document.querySelectorAll('.matched').forEach(el => {
+                        el.classList.remove('matched');
+                    });
+                }, 1000);
+            }
+        }
+        
+        // 显示成功弹窗
+        function showSuccessModal() {
+            const modal = document.getElementById('successModal');
+            const content = document.getElementById('successContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                content.style.transform = 'scale(1)';
+            }, 100);
+        }
+        
+        // 下一关
+        function nextLevel() {
+            currentLevel++;
+            
+            if (currentLevel >= totalLevels) {
+                // 游戏完成
+                alert('恭喜完成所有关卡！');
+                window.history.back();
+            } else {
+                // 隐藏弹窗
+                const modal = document.getElementById('successModal');
+                const content = document.getElementById('successContent');
+                content.style.transform = 'scale(0)';
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
+                
+                // 重置按钮
+                document.getElementById('checkButton').disabled = true;
+                
+                // 加载下一关
+                loadLevel();
+            }
+        }
+        
+        // 更新进度条
+        function updateProgress() {
+            const progress = ((currentLevel + 1) / totalLevels) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+        
+        // 初始化
+        initGame();
+    </script>
+</body>
+</html>
