@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kids Word Learning - 在线演示版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .demo-container {
+            max-width: 400px;
+            margin: 20px auto;
+            background: #000;
+            border-radius: 40px;
+            padding: 10px;
+            min-height: 700px;
+        }
+        .demo-screen {
+            background: white;
+            border-radius: 30px;
+            height: 100%;
+            min-height: 680px;
+            overflow: hidden;
+            position: relative;
+        }
+        .choice-button {
+            transition: all 0.3s ease;
+        }
+        .choice-button:hover {
+            transform: translateY(-2px);
+            background-color: #e0e7ff;
+        }
+        .correct {
+            background-color: #10b981 !important;
+            color: white !important;
+            animation: correctPulse 0.6s ease;
+        }
+        .wrong {
+            background-color: #ef4444 !important;
+            color: white !important;
+            animation: shake 0.5s ease;
+        }
+        @keyframes correctPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="demo-container">
+        <div class="demo-screen">
+            <!-- 游戏内容 -->
+            <div class="p-4">
+                <h1 class="text-2xl font-bold text-center mb-4">单词学习游戏</h1>
+                
+                <!-- 进度条 -->
+                <div class="bg-gray-200 rounded-full h-3 mb-6">
+                    <div id="progressBar" class="bg-green-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+
+                <!-- 分数显示 -->
+                <div class="text-center mb-6">
+                    <span class="text-gray-600">得分：</span>
+                    <span id="score" class="text-2xl font-bold text-indigo-600">0</span>
+                </div>
+
+                <!-- 题目区域 -->
+                <div class="text-center mb-8">
+                    <div class="bg-gray-50 rounded-2xl p-6 inline-block">
+                        <div id="questionEmoji" class="text-6xl mb-2">🍎</div>
+                        <p class="text-gray-600">这是什么？</p>
+                    </div>
+                </div>
+
+                <!-- 选项区域 -->
+                <div id="choices" class="space-y-3">
+                    <!-- 动态生成选项 -->
+                </div>
+
+                <!-- 反馈信息 -->
+                <div id="feedback" class="mt-6 text-center hidden">
+                    <p id="feedbackText" class="text-lg font-medium"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 简化的单词数据
+        const words = {
+            fruits: [
+                { emoji: "🍎", word: "apple", chinese: "苹果" },
+                { emoji: "🍌", word: "banana", chinese: "香蕉" },
+                { emoji: "🍊", word: "orange", chinese: "橙子" },
+                { emoji: "🍓", word: "strawberry", chinese: "草莓" },
+                { emoji: "🍇", word: "grape", chinese: "葡萄" }
+            ],
+            animals: [
+                { emoji: "🐶", word: "dog", chinese: "狗" },
+                { emoji: "🐱", word: "cat", chinese: "猫" },
+                { emoji: "🐰", word: "rabbit", chinese: "兔子" },
+                { emoji: "🐘", word: "elephant", chinese: "大象" },
+                { emoji: "🐯", word: "tiger", chinese: "老虎" }
+            ]
+        };
+
+        let currentWord = null;
+        let score = 0;
+        let questionCount = 0;
+        let totalQuestions = 10;
+
+        function getRandomWord() {
+            const categories = Object.keys(words);
+            const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+            const categoryWords = words[randomCategory];
+            return categoryWords[Math.floor(Math.random() * categoryWords.length)];
+        }
+
+        function generateChoices() {
+            const allWords = [...words.fruits, ...words.animals];
+            const choices = [currentWord];
+            
+            while (choices.length < 4) {
+                const randomWord = allWords[Math.floor(Math.random() * allWords.length)];
+                if (!choices.find(w => w.word === randomWord.word)) {
+                    choices.push(randomWord);
+                }
+            }
+            
+            return choices.sort(() => Math.random() - 0.5);
+        }
+
+        function loadQuestion() {
+            currentWord = getRandomWord();
+            const choices = generateChoices();
+            
+            document.getElementById('questionEmoji').textContent = currentWord.emoji;
+            
+            const choicesContainer = document.getElementById('choices');
+            choicesContainer.innerHTML = '';
+            
+            choices.forEach((word, index) => {
+                const button = document.createElement('button');
+                button.className = 'choice-button w-full bg-white p-4 rounded-xl shadow-sm text-left flex items-center justify-between';
+                button.innerHTML = `
+                    <span class="font-medium">${word.word}</span>
+                    <span class="text-gray-500 text-sm">${word.chinese}</span>
+                `;
+                button.onclick = () => checkAnswer(word, button);
+                choicesContainer.appendChild(button);
+            });
+            
+            document.getElementById('feedback').classList.add('hidden');
+        }
+
+        function checkAnswer(selectedWord, button) {
+            const buttons = document.querySelectorAll('.choice-button');
+            buttons.forEach(btn => btn.disabled = true);
+            
+            const feedback = document.getElementById('feedback');
+            const feedbackText = document.getElementById('feedbackText');
+            
+            if (selectedWord.word === currentWord.word) {
+                button.classList.add('correct');
+                score += 10;
+                feedbackText.textContent = '✅ 正确！太棒了！';
+                feedbackText.className = 'text-green-600 font-bold';
+            } else {
+                button.classList.add('wrong');
+                feedbackText.textContent = `❌ 错误，正确答案是 ${currentWord.word}`;
+                feedbackText.className = 'text-red-600 font-bold';
+                
+                // 标记正确答案
+                buttons.forEach(btn => {
+                    if (btn.textContent.includes(currentWord.word)) {
+                        btn.classList.add('correct');
+                    }
+                });
+            }
+            
+            feedback.classList.remove('hidden');
+            document.getElementById('score').textContent = score;
+            
+            questionCount++;
+            updateProgress();
+            
+            setTimeout(() => {
+                if (questionCount < totalQuestions) {
+                    loadQuestion();
+                } else {
+                    endGame();
+                }
+            }, 2000);
+        }
+
+        function updateProgress() {
+            const progress = (questionCount / totalQuestions) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+
+        function endGame() {
+            const choicesContainer = document.getElementById('choices');
+            choicesContainer.innerHTML = `
+                <div class="text-center">
+                    <div class="text-6xl mb-4">🎉</div>
+                    <h2 class="text-2xl font-bold mb-2">游戏结束！</h2>
+                    <p class="text-gray-600 mb-4">最终得分：${score} 分</p>
+                    <button onclick="restartGame()" class="bg-indigo-600 text-white px-6 py-3 rounded-full font-medium">
+                        再玩一次
+                    </button>
+                </div>
+            `;
+        }
+
+        function restartGame() {
+            score = 0;
+            questionCount = 0;
+            document.getElementById('score').textContent = '0';
+            document.getElementById('progressBar').style.width = '0%';
+            loadQuestion();
+        }
+
+        // 开始游戏
+        loadQuestion();
+    </script>
+</body>
+</html>
