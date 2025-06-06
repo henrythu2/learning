@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PK对战 - Kids Word Learning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .player-score {
+            transition: all 0.3s ease;
+        }
+        .score-increase {
+            animation: scoreUp 0.5s ease;
+        }
+        @keyframes scoreUp {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); color: #10b981; }
+            100% { transform: scale(1); }
+        }
+        .vs-animation {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        .countdown-number {
+            animation: countdownPop 1s ease;
+        }
+        @keyframes countdownPop {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.5); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .choice-button {
+            transition: all 0.2s ease;
+        }
+        .choice-button:active {
+            transform: scale(0.95);
+        }
+        .correct-flash {
+            animation: correctFlash 0.3s ease;
+        }
+        @keyframes correctFlash {
+            0%, 100% { background-color: white; }
+            50% { background-color: #10b981; }
+        }
+        .wrong-flash {
+            animation: wrongFlash 0.3s ease;
+        }
+        @keyframes wrongFlash {
+            0%, 100% { background-color: white; }
+            50% { background-color: #ef4444; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 顶部对战信息 -->
+    <div class="bg-gradient-to-r from-purple-600 to-pink-600 p-4 text-white">
+        <div class="flex items-center justify-between mb-3">
+            <button onclick="exitPK()" class="text-white/80">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <div class="text-center">
+                <p class="text-sm opacity-90">PK对战</p>
+                <p id="timer" class="text-2xl font-bold">05:00</p>
+            </div>
+            <button class="invisible">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        
+        <!-- 对战双方信息 -->
+        <div class="flex items-center justify-between">
+            <div class="text-center flex-1">
+                <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-1">
+                    <span class="text-2xl">👦</span>
+                </div>
+                <p class="font-medium">我</p>
+                <p id="myScore" class="text-3xl font-bold player-score">0</p>
+            </div>
+            
+            <div class="text-4xl vs-animation mx-4">VS</div>
+            
+            <div class="text-center flex-1">
+                <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-1">
+                    <span class="text-2xl">👧</span>
+                </div>
+                <p class="font-medium">小红</p>
+                <p id="opponentScore" class="text-3xl font-bold player-score">0</p>
+            </div>
+        </div>
+        
+        <!-- 进度对比条 -->
+        <div class="mt-4 bg-white/20 rounded-full h-3 relative overflow-hidden">
+            <div id="myProgress" class="absolute left-0 top-0 h-full bg-blue-500 transition-all duration-300" style="width: 50%"></div>
+            <div id="opponentProgress" class="absolute right-0 top-0 h-full bg-pink-500 transition-all duration-300" style="width: 50%"></div>
+        </div>
+    </div>
+
+    <!-- 游戏区域 -->
+    <div class="p-4">
+        <!-- 倒计时遮罩 -->
+        <div id="countdown" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+            <div class="text-center">
+                <p class="text-white text-2xl mb-4">准备开始！</p>
+                <div id="countdownNumber" class="text-8xl font-bold text-white countdown-number">3</div>
+            </div>
+        </div>
+
+        <!-- 题目区域 -->
+        <div class="text-center mb-6">
+            <div class="bg-white rounded-2xl p-6 shadow-sm inline-block">
+                <div id="questionEmoji" class="text-7xl mb-3">🍎</div>
+                <p class="text-gray-600">选择正确的单词</p>
+            </div>
+        </div>
+
+        <!-- 选项区域 -->
+        <div id="choices" class="grid grid-cols-2 gap-3 max-w-md mx-auto">
+            <!-- 动态生成选项 -->
+        </div>
+
+        <!-- 对手状态提示 -->
+        <div id="opponentStatus" class="mt-6 text-center">
+            <p class="text-sm text-gray-500">
+                <i class="fas fa-circle text-green-500 text-xs mr-1"></i>
+                对手正在答题...
+            </p>
+        </div>
+    </div>
+
+    <!-- 游戏结束弹窗 -->
+    <div id="gameOverModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-3xl p-8 text-center max-w-sm mx-4">
+            <div id="resultIcon" class="text-6xl mb-4"></div>
+            <h3 id="resultTitle" class="text-2xl font-bold text-gray-800 mb-2"></h3>
+            <div class="flex items-center justify-center mb-4">
+                <div class="text-center mx-4">
+                    <p class="text-3xl font-bold text-blue-600" id="finalMyScore">0</p>
+                    <p class="text-sm text-gray-500">我</p>
+                </div>
+                <div class="text-2xl text-gray-400 mx-2">:</div>
+                <div class="text-center mx-4">
+                    <p class="text-3xl font-bold text-pink-600" id="finalOpponentScore">0</p>
+                    <p class="text-sm text-gray-500">小红</p>
+                </div>
+            </div>
+            <div id="rewardInfo" class="bg-gray-50 rounded-xl p-3 mb-4">
+                <!-- 奖励信息 -->
+            </div>
+            <div class="flex space-x-3">
+                <button onclick="rematch()" class="flex-1 bg-indigo-600 text-white py-3 rounded-full font-medium">
+                    再来一局
+                </button>
+                <button onclick="backToLeaderboard()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-full font-medium">
+                    返回排行榜
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="wordData.js"></script>
+    <script>
+        // 游戏状态
+        let gameMode = 'speed'; // speed, accuracy, marathon
+        let myScore = 0;
+        let opponentScore = 0;
+        let timeLeft = 300; // 5分钟
+        let gameTimer = null;
+        let currentWord = null;
+        let questionCount = 0;
+        let correctCount = 0;
+        let isGameActive = false;
+
+        // 获取游戏模式
+        const urlParams = new URLSearchParams(window.location.search);
+        gameMode = urlParams.get('mode') || 'speed';
+
+        // 初始化游戏
+        function initGame() {
+            startCountdown();
+        }
+
+        // 开始倒计时
+        function startCountdown() {
+            let count = 3;
+            const countdownEl = document.getElementById('countdown');
+            const numberEl = document.getElementById('countdownNumber');
+            
+            const countInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    numberEl.textContent = count;
+                    numberEl.className = 'text-8xl font-bold text-white countdown-number';
+                } else if (count === 0) {
+                    numberEl.textContent = 'GO!';
+                    numberEl.className = 'text-8xl font-bold text-yellow-400 countdown-number';
+                } else {
+                    clearInterval(countInterval);
+                    countdownEl.classList.add('hidden');
+                    startGame();
+                }
+            }, 1000);
+        }
+
+        // 开始游戏
+        function startGame() {
+            isGameActive = true;
+            loadQuestion();
+            startTimer();
+            simulateOpponent();
+        }
+
+        // 开始计时器
+        function startTimer() {
+            gameTimer = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        // 更新计时器显示
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('timer').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // 加载题目
+        function loadQuestion() {
+            const categories = Object.keys(wordData);
+            const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+            const words = wordData[randomCategory].words;
+            
+            currentWord = words[Math.floor(Math.random() * words.length)];
+            
+            // 生成选项
+            const choices = [currentWord];
+            const otherWords = words.filter(w => w.id !== currentWord.id);
+            
+            while (choices.length < 4 && otherWords.length > 0) {
+                const randomIndex = Math.floor(Math.random() * otherWords.length);
+                choices.push(otherWords[randomIndex]);
+                otherWords.splice(randomIndex, 1);
+            }
+            
+            // 打乱选项
+            choices.sort(() => Math.random() - 0.5);
+            
+            // 更新UI
+            document.getElementById('questionEmoji').textContent = currentWord.emoji;
+            
+            const choicesContainer = document.getElementById('choices');
+            choicesContainer.innerHTML = '';
+            
+            choices.forEach(word => {
+                const button = document.createElement('button');
+                button.className = 'choice-button bg-white p-4 rounded-xl shadow-sm font-medium text-lg';
+                button.textContent = word.word;
+                button.onclick = () => checkAnswer(word, button);
+                choicesContainer.appendChild(button);
+            });
+        }
+
+        // 检查答案
+        function checkAnswer(selectedWord, button) {
+            if (!isGameActive) return;
+            
+            questionCount++;
+            
+            if (selectedWord.id === currentWord.id) {
+                // 正确
+                correctCount++;
+                myScore += 10;
+                button.classList.add('correct-flash');
+                updateMyScore();
+            } else {
+                // 错误
+                button.classList.add('wrong-flash');
+                if (gameMode === 'marathon') {
+                    // 马拉松模式，错误即结束
+                    endGame();
+                    return;
+                }
+            }
+            
+            // 禁用所有按钮
+            document.querySelectorAll('.choice-button').forEach(btn => {
+                btn.disabled = true;
+            });
+            
+            // 加载下一题
+            setTimeout(() => {
+                loadQuestion();
+            }, 500);
+        }
+
+        // 更新我的分数
+        function updateMyScore() {
+            const scoreEl = document.getElementById('myScore');
+            scoreEl.textContent = myScore;
+            scoreEl.classList.add('score-increase');
+            setTimeout(() => {
+                scoreEl.classList.remove('score-increase');
+            }, 500);
+            
+            updateProgressBar();
+        }
+
+        // 模拟对手
+        function simulateOpponent() {
+            const opponentInterval = setInterval(() => {
+                if (!isGameActive) {
+                    clearInterval(opponentInterval);
+                    return;
+                }
+                
+                // 随机决定对手是否答对
+                if (Math.random() > 0.3) {
+                    opponentScore += 10;
+                    const scoreEl = document.getElementById('opponentScore');
+                    scoreEl.textContent = opponentScore;
+                    scoreEl.classList.add('score-increase');
+                    setTimeout(() => {
+                        scoreEl.classList.remove('score-increase');
+                    }, 500);
+                    
+                    updateProgressBar();
+                }
+            }, 2000 + Math.random() * 2000);
+        }
+
+        // 更新进度条
+        function updateProgressBar() {
+            const total = myScore + opponentScore;
+            if (total === 0) return;
+            
+            const myPercent = (myScore / total) * 100;
+            const opponentPercent = (opponentScore / total) * 100;
+            
+            document.getElementById('myProgress').style.width = myPercent + '%';
+            document.getElementById('opponentProgress').style.width = opponentPercent + '%';
+        }
+
+        // 结束游戏
+        function endGame() {
+            isGameActive = false;
+            clearInterval(gameTimer);
+            
+            // 显示结果
+            const modal = document.getElementById('gameOverModal');
+            const resultIcon = document.getElementById('resultIcon');
+            const resultTitle = document.getElementById('resultTitle');
+            const rewardInfo = document.getElementById('rewardInfo');
+            
+            document.getElementById('finalMyScore').textContent = myScore;
+            document.getElementById('finalOpponentScore').textContent = opponentScore;
+            
+            if (myScore > opponentScore) {
+                resultIcon.innerHTML = '🏆';
+                resultTitle.textContent = '你赢了！';
+                rewardInfo.innerHTML = `
+                    <p class="text-sm text-gray-600">获得奖励</p>
+                    <div class="flex items-center justify-center space-x-4 mt-2">
+                        <div><i class="fas fa-bolt text-yellow-500"></i> +${myScore} XP</div>
+                        <div><i class="fas fa-trophy text-orange-500"></i> +1 胜场</div>
+                    </div>
+                `;
+            } else if (myScore < opponentScore) {
+                resultIcon.innerHTML = '😔';
+                resultTitle.textContent = '再接再厉！';
+                rewardInfo.innerHTML = `
+                    <p class="text-sm text-gray-600">获得奖励</p>
+                    <div class="flex items-center justify-center">
+                        <div><i class="fas fa-bolt text-yellow-500"></i> +${Math.floor(myScore * 0.5)} XP</div>
+                    </div>
+                `;
+            } else {
+                resultIcon.innerHTML = '🤝';
+                resultTitle.textContent = '平局！';
+                rewardInfo.innerHTML = `
+                    <p class="text-sm text-gray-600">获得奖励</p>
+                    <div class="flex items-center justify-center">
+                        <div><i class="fas fa-bolt text-yellow-500"></i> +${Math.floor(myScore * 0.8)} XP</div>
+                    </div>
+                `;
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        // 再来一局
+        function rematch() {
+            location.reload();
+        }
+
+        // 返回排行榜
+        function backToLeaderboard() {
+            window.location.href = 'leaderboard.html';
+        }
+
+        // 退出PK
+        function exitPK() {
+            if (confirm('确定要退出PK吗？')) {
+                window.history.back();
+            }
+        }
+
+        // 初始化
+        initGame();
+    </script>
+</body>
+</html>

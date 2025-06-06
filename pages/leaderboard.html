@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>排行榜 - Kids Word Learning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .rank-card {
+            transition: all 0.3s ease;
+        }
+        .rank-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        .crown-animation {
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .fire-animation {
+            animation: fire 1.5s ease-in-out infinite;
+        }
+        @keyframes fire {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        .tab-active {
+            border-bottom: 3px solid #6366f1;
+            color: #6366f1;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 顶部标题 -->
+    <div class="bg-white p-4 shadow-sm">
+        <h1 class="text-xl font-bold text-gray-800">排行榜</h1>
+        <p class="text-sm text-gray-500 mt-1">和好友一起竞争学习</p>
+    </div>
+
+    <!-- Tab 切换 -->
+    <div class="bg-white px-4 sticky top-0 z-10">
+        <div class="flex space-x-6 overflow-x-auto">
+            <button onclick="switchTab('friends')" id="tab-friends" class="py-3 px-2 font-medium text-gray-600 whitespace-nowrap tab-active">
+                好友PK
+            </button>
+            <button onclick="switchTab('weekly')" id="tab-weekly" class="py-3 px-2 font-medium text-gray-600 whitespace-nowrap">
+                本周榜单
+            </button>
+            <button onclick="switchTab('global')" id="tab-global" class="py-3 px-2 font-medium text-gray-600 whitespace-nowrap">
+                总榜
+            </button>
+            <button onclick="switchTab('achievements')" id="tab-achievements" class="py-3 px-2 font-medium text-gray-600 whitespace-nowrap">
+                成就墙
+            </button>
+        </div>
+    </div>
+
+    <!-- 好友PK内容 -->
+    <div id="content-friends" class="p-4">
+        <!-- PK挑战卡片 -->
+        <div class="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl p-4 text-white mb-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="font-bold text-lg">发起PK挑战</h3>
+                    <p class="text-sm opacity-90 mt-1">邀请好友一起学习对战</p>
+                </div>
+                <button onclick="startPK()" class="bg-white text-purple-600 px-4 py-2 rounded-full font-medium">
+                    <i class="fas fa-gamepad mr-2"></i>开始PK
+                </button>
+            </div>
+        </div>
+
+        <!-- 当前PK战况 -->
+        <div class="mb-6">
+            <h3 class="font-semibold text-gray-800 mb-3">进行中的对战</h3>
+            <div class="bg-white rounded-2xl p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-center">
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-1">
+                            <span class="text-xl">👦</span>
+                        </div>
+                        <p class="text-sm font-medium">我</p>
+                        <p class="text-2xl font-bold text-blue-600">85</p>
+                    </div>
+                    <div class="text-3xl fire-animation">🔥</div>
+                    <div class="text-center">
+                        <div class="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center mb-1">
+                            <span class="text-xl">👧</span>
+                        </div>
+                        <p class="text-sm font-medium">小红</p>
+                        <p class="text-2xl font-bold text-pink-600">92</p>
+                    </div>
+                </div>
+                <div class="bg-gray-100 rounded-full h-2 relative">
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500 to-pink-500 rounded-full" style="width: 48%"></div>
+                </div>
+                <p class="text-center text-sm text-gray-500 mt-2">还剩 2 小时 15 分钟</p>
+            </div>
+        </div>
+
+        <!-- 好友排行 -->
+        <div>
+            <h3 class="font-semibold text-gray-800 mb-3">好友排行</h3>
+            <div class="space-y-3">
+                <!-- 第一名 -->
+                <div class="rank-card bg-white rounded-2xl p-4 shadow-sm">
+                    <div class="flex items-center">
+                        <div class="text-3xl mr-3">
+                            <div class="crown-animation">👑</div>
+                        </div>
+                        <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
+                            <span class="text-xl">👧</span>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-medium text-gray-800">小红</h4>
+                            <div class="flex items-center text-sm text-gray-500 mt-1">
+                                <i class="fas fa-trophy text-yellow-500 mr-1"></i>
+                                <span>本周冠军 · 1280 XP</span>
+                            </div>
+                        </div>
+                        <button onclick="challengeFriend('小红')" class="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full text-sm font-medium">
+                            挑战
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 第二名 -->
+                <div class="rank-card bg-white rounded-2xl p-4 shadow-sm">
+                    <div class="flex items-center">
+                        <div class="text-2xl mr-3 text-gray-400">2</div>
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                            <span class="text-xl">👦</span>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-medium text-gray-800">小明</h4>
+                            <div class="flex items-center text-sm text-gray-500 mt-1">
+                                <i class="fas fa-fire text-orange-500 mr-1"></i>
+                                <span>连胜 5 场 · 1150 XP</span>
+                            </div>
+                        </div>
+                        <button onclick="challengeFriend('小明')" class="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full text-sm font-medium">
+                            挑战
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 第三名 -->
+                <div class="rank-card bg-white rounded-2xl p-4 shadow-sm">
+                    <div class="flex items-center">
+                        <div class="text-2xl mr-3 text-gray-400">3</div>
+                        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                            <span class="text-xl">👱</span>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-medium text-gray-800">小华</h4>
+                            <div class="flex items-center text-sm text-gray-500 mt-1">
+                                <i class="fas fa-star text-purple-500 mr-1"></i>
+                                <span>新晋高手 · 980 XP</span>
+                            </div>
+                        </div>
+                        <button onclick="challengeFriend('小华')" class="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full text-sm font-medium">
+                            挑战
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 自己的排名 -->
+                <div class="rank-card bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4">
+                    <div class="flex items-center">
+                        <div class="text-2xl mr-3 text-indigo-600 font-bold">4</div>
+                        <div class="w-12 h-12 bg-indigo-200 rounded-full flex items-center justify-center mr-3">
+                            <span class="text-xl">🙂</span>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-medium text-gray-800">我</h4>
+                            <div class="flex items-center text-sm text-gray-500 mt-1">
+                                <i class="fas fa-chart-line text-green-500 mr-1"></i>
+                                <span>进步神速 · 850 XP</span>
+                            </div>
+                        </div>
+                        <div class="text-sm text-indigo-600 font-medium">
+                            <i class="fas fa-arrow-up mr-1"></i>+2
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 本周榜单内容 -->
+    <div id="content-weekly" class="p-4 hidden">
+        <div class="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-4 text-white mb-4">
+            <div class="text-center">
+                <h3 class="font-bold text-lg">本周学霸榜</h3>
+                <p class="text-sm opacity-90 mt-1">每周一更新，冲击榜首赢取奖励！</p>
+                <div class="mt-3 text-3xl">🏆</div>
+            </div>
+        </div>
+        <!-- 榜单列表 -->
+        <div class="space-y-3">
+            <!-- 动态生成榜单 -->
+        </div>
+    </div>
+
+    <!-- 总榜内容 -->
+    <div id="content-global" class="p-4 hidden">
+        <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-4 text-white mb-4">
+            <div class="text-center">
+                <h3 class="font-bold text-lg">全球总榜</h3>
+                <p class="text-sm opacity-90 mt-1">看看谁是真正的单词大师！</p>
+                <div class="mt-3 text-3xl">🌍</div>
+            </div>
+        </div>
+        <!-- 榜单列表 -->
+        <div class="space-y-3">
+            <!-- 动态生成榜单 -->
+        </div>
+    </div>
+
+    <!-- 成就墙内容 -->
+    <div id="content-achievements" class="p-4 hidden">
+        <div class="grid grid-cols-3 gap-4">
+            <div class="bg-white rounded-2xl p-4 text-center">
+                <div class="text-4xl mb-2">🎯</div>
+                <p class="text-sm font-medium">神射手</p>
+                <p class="text-xs text-gray-500">连续10次全对</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 text-center">
+                <div class="text-4xl mb-2">⚡</div>
+                <p class="text-sm font-medium">闪电侠</p>
+                <p class="text-xs text-gray-500">3秒内答对</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 text-center">
+                <div class="text-4xl mb-2">🔥</div>
+                <p class="text-sm font-medium">连胜王</p>
+                <p class="text-xs text-gray-500">PK连胜5场</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- PK邀请弹窗 -->
+    <div id="pkModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-3xl p-6 max-w-sm mx-4 transform scale-0 transition-transform" id="pkModalContent">
+            <h3 class="text-xl font-bold text-center mb-4">选择PK模式</h3>
+            <div class="space-y-3">
+                <button onclick="selectPKMode('speed')" class="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 rounded-2xl">
+                    <i class="fas fa-bolt text-2xl mb-2"></i>
+                    <p class="font-bold">速度对决</p>
+                    <p class="text-sm opacity-90">5分钟内答题最多</p>
+                </button>
+                <button onclick="selectPKMode('accuracy')" class="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white p-4 rounded-2xl">
+                    <i class="fas fa-bullseye text-2xl mb-2"></i>
+                    <p class="font-bold">精准挑战</p>
+                    <p class="text-sm opacity-90">正确率最高获胜</p>
+                </button>
+                <button onclick="selectPKMode('marathon')" class="w-full bg-gradient-to-r from-green-500 to-teal-500 text-white p-4 rounded-2xl">
+                    <i class="fas fa-running text-2xl mb-2"></i>
+                    <p class="font-bold">马拉松赛</p>
+                    <p class="text-sm opacity-90">答错即止，看谁走更远</p>
+                </button>
+            </div>
+            <button onclick="closePKModal()" class="mt-4 text-gray-500 text-sm">取消</button>
+        </div>
+    </div>
+
+    <script>
+        // 切换Tab
+        function switchTab(tab) {
+            // 隐藏所有内容
+            document.querySelectorAll('[id^="content-"]').forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            // 移除所有tab激活状态
+            document.querySelectorAll('[id^="tab-"]').forEach(tabBtn => {
+                tabBtn.classList.remove('tab-active');
+            });
+            
+            // 显示选中的内容
+            document.getElementById(`content-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).classList.add('tab-active');
+        }
+
+        // 开始PK
+        function startPK() {
+            const modal = document.getElementById('pkModal');
+            const content = document.getElementById('pkModalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                content.style.transform = 'scale(1)';
+            }, 100);
+        }
+
+        // 关闭PK弹窗
+        function closePKModal() {
+            const modal = document.getElementById('pkModal');
+            const content = document.getElementById('pkModalContent');
+            content.style.transform = 'scale(0)';
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // 选择PK模式
+        function selectPKMode(mode) {
+            closePKModal();
+            // 跳转到对应的PK游戏页面
+            window.location.href = `pk-game.html?mode=${mode}`;
+        }
+
+        // 挑战好友
+        function challengeFriend(friendName) {
+            if (confirm(`确定要挑战${friendName}吗？`)) {
+                startPK();
+            }
+        }
+
+        // 模拟数据更新
+        function updateLeaderboard() {
+            // 这里可以从服务器获取最新排行榜数据
+            console.log('更新排行榜数据...');
+        }
+
+        // 页面加载时更新数据
+        updateLeaderboard();
+    </script>
+</body>
+</html>
